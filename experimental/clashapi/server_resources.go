@@ -41,7 +41,8 @@ func (s *Server) downloadExternalUI() error {
 	if s.externalUIDownloadURL != "" {
 		downloadURL = s.externalUIDownloadURL
 	} else {
-		downloadURL = "https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip"
+		// downloadURL = "https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip"
+		downloadURL = "https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
 	}
 	var detour adapter.Outbound
 	if s.externalUIDownloadDetour != "" {
