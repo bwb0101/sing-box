@@ -8,8 +8,12 @@
 package subconvert
 
 import (
+	"math/rand/v2"
 	"strconv"
 	"strings"
+
+	"github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
 )
 
 func explodeVLESS(vless string, node *Proxy) {
@@ -105,4 +109,54 @@ func explodeStdVLESS(vless string, node *Proxy) {
 	}
 
 	vlessConstruct(node, VLESS_DEFAULT_GROUP, remarks, add, port, uuid, sni, alpn, fingerprint, flow, xtls, public_key, short_id, &tfo, &scv, "")
+}
+
+func ToVLESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
+	pe := "xudp"
+	oo := option.VLESSOutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server:     proxy.Hostname,
+			ServerPort: proxy.Port,
+		},
+		UUID:           proxy.UUID,
+		PacketEncoding: &pe,
+		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+			TLS: &option.OutboundTLSOptions{
+				Enabled:    true,
+				ServerName: proxy.ServerName,
+				UTLS:       &option.OutboundUTLSOptions{},
+				Reality:    &option.OutboundRealityOptions{},
+			},
+		},
+	}
+	oo.RoutingMark = option.FwMark(pc.RoutingMark)
+	if proxy.XTLS == 2 {
+		oo.Flow = "xtls-rprx-vision"
+	} else {
+		oo.Flow = proxy.Flow
+	}
+	if proxy.PublicKey != "" && proxy.ShortID != "" {
+		var fp = []string{"chrome", "firefox", "safari", "ios", "edge", "qq"}
+		oo.OutboundTLSOptionsContainer = option.OutboundTLSOptionsContainer{
+			TLS: &option.OutboundTLSOptions{
+				Enabled:    true,
+				ServerName: proxy.ServerName,
+				ALPN:       proxy.Alpn,
+				UTLS: &option.OutboundUTLSOptions{
+					Enabled:     true,
+					Fingerprint: fp[rand.IntN(len(fp))],
+				},
+				Reality: &option.OutboundRealityOptions{
+					Enabled:   true,
+					ShortID:   proxy.ShortID,
+					PublicKey: proxy.PublicKey,
+				},
+			},
+		}
+	}
+	ob.Type = constant.TypeVLESS
+	ob.Tag = proxy.Remark
+	ob.Title = pc.Title
+	ob.Options = oo
+	return
 }

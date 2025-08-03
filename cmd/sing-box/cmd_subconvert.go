@@ -1,25 +1,25 @@
 package main
 
 import (
-	json2 "encoding/json"
-	"io"
-	"net/http"
+	"bytes"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/subconvert"
+	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/json/badoption"
 	"github.com/spf13/cobra"
-	"gopkg.in/ini.v1"
 )
 
 var (
 	subUrl     string
-	rulesUrl   string
 	rulesetUrl string
 )
 
@@ -33,23 +33,8 @@ var commandSubconvert = &cobra.Command{
 	},
 }
 
-type (
-	rulesetOption struct {
-		SpeedDomain string
-		Set         struct {
-			Type           string
-			UpdateInterval badoption.Duration
-			Urls           []struct {
-				Tag string
-				Url string
-			}
-		}
-	}
-)
-
 func init() {
 	mainCommand.PersistentFlags().StringVarP(&subUrl, "sub", "", "", "订阅地址")
-	mainCommand.PersistentFlags().StringVarP(&rulesUrl, "rule", "", "", "规则地址")
 	mainCommand.PersistentFlags().StringVarP(&rulesetUrl, "rset", "", "", "规则集地址")
 	mainCommand.AddCommand(commandSubconvert)
 }
@@ -69,49 +54,218 @@ func _subconvert() error {
 	if err != nil {
 		return err
 	}
+	proxyCfg, err := subconvert.UrlParse(&subconvert.ProxyUrl{
+		SubUrl:     subUrl,
+		RuleSetUrl: rulesetUrl,
+	})
+	if err != nil {
+		return err
+	}
 	cfgOpt := cfg[0].options
-	if err = convert_ruleset(&cfgOpt); err != nil {
+	subs(&cfgOpt, proxyCfg)
+	convert_ruleset(&cfgOpt, proxyCfg)
+	if err = convert_rules(&cfgOpt, proxyCfg); err != nil {
 		return err
 	}
-	if err = convert_rules(&cfgOpt); err != nil {
-		return err
+	//
+	buffer := new(bytes.Buffer)
+	encoder := json.NewEncoder(buffer)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(cfgOpt)
+	if err != nil {
+		return E.Cause(err, "encode config")
 	}
-	b, err := json2.MarshalIndent(cfgOpt, "", "  ")
+	err = os.WriteFile(configPaths[0], buffer.Bytes(), 0o644)
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile(configPaths[0], os.O_RDWR, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.Write(b)
-	return err
+	return nil
 }
 
-func convert_ruleset(cfgOpt *option.Options) error {
-	if rulesetUrl != "" {
-		if resp, err := http.Get(rulesetUrl); err != nil {
-			return err
-		} else {
-			if bs, err := io.ReadAll(resp.Body); err != nil {
-				return err
+func subs(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
+	if pc.Sub != "" {
+		var proxy []subconvert.Proxy
+		subconvert.ExplodeConfContent(pc.Sub, &proxy)
+		if len(pc.Filters) > 0 {
+			for i := 0; i < len(proxy); i++ {
+				s := proxy[i]
+				for _, f := range pc.Filters {
+					if strings.Contains(s.Remark, f) {
+						proxy = append(proxy[:i], proxy[i+1:]...)
+						i--
+						break
+					}
+				}
+			}
+		}
+		var hasInit bool
+		var outboundProxys = map[string]int{}
+		var outboundTitles = map[string][]int{}
+		for i, outbound := range cfgOpt.Outbounds {
+			if outbound.Type == constant.TypeDirect {
+				hasInit = true
+			}
+			if subconvert.OutboundTypes[outbound.Type] {
+				outboundTitles[outbound.Title] = append(outboundTitles[outbound.Title], i)
+				outboundProxys[outbound.Tag] = i
+			}
+		}
+		if !hasInit {
+			cfgOpt.Outbounds = append(cfgOpt.Outbounds, option.Outbound{
+				Type: constant.TypeDirect,
+				Tag:  strings.ToUpper(constant.TypeDirect),
+				Options: option.ListenOptions{
+					RoutingMark: option.FwMark(pc.RoutingMark),
+				},
+			})
+			cfgOpt.Outbounds = append(cfgOpt.Outbounds, option.Outbound{
+				Type: constant.TypeBlock,
+				Tag:  "REJECT",
+			})
+		}
+		ins := 2 // 上面两个
+		for _, p := range proxy {
+			var ob option.Outbound
+			switch p.Type {
+			case subconvert.Shadowsocks:
+				ob = subconvert.ToSS(p, pc)
+			case subconvert.VMess:
+				ob = subconvert.ToVMESS(p, pc)
+			case subconvert.VLESS:
+				ob = subconvert.ToVLESS(p, pc)
+			case subconvert.Trojan:
+				ob = subconvert.ToTrojan(p, pc)
+			}
+			if idx, ok := outboundProxys[ob.Tag]; ok {
+				cfgOpt.Outbounds[idx] = ob
+				list := outboundTitles[ob.Title]
+				for i, ix := range list {
+					if ix == idx {
+						outboundTitles[ob.Title] = append(list[:i], list[i+1:]...)
+						break
+					}
+				}
 			} else {
-				var opt rulesetOption
-				if err = json.Unmarshal(bs, &opt); err != nil {
-					return err
+				cfgOpt.Outbounds = append(cfgOpt.Outbounds, ob)
+			}
+		}
+		if len(outboundTitles[pc.Title]) > 0 {
+			idxs := outboundTitles[pc.Title]
+			sort.Sort(sort.Reverse(sort.IntSlice(idxs)))
+			for _, idx := range idxs {
+				cfgOpt.Outbounds = append(cfgOpt.Outbounds[:idx], cfgOpt.Outbounds[idx+1:]...)
+			}
+			clear(outboundProxys) // 重新刷新
+			for i, outbound := range cfgOpt.Outbounds {
+				if subconvert.OutboundTypes[outbound.Type] {
+					outboundProxys[outbound.Tag] = i
 				}
-				route := cfgOpt.Route
-				if route.RuleSet != nil {
-					route.RuleSet = route.RuleSet[:0]
+			}
+		}
+		//
+		if pc.Proxy != nil {
+			ins += len(proxy)
+			mv := 0
+			for i, groupOption := range pc.Proxy.Proxys {
+				ob := proxy_parse(proxy, groupOption)
+				if op, ok := outboundProxys[ob.Tag]; ok {
+					cfgOpt.Outbounds[op+mv] = ob
+				} else {
+					if i+ins >= len(cfgOpt.Outbounds) {
+						cfgOpt.Outbounds = append(cfgOpt.Outbounds, ob)
+					} else {
+						cfgOpt.Outbounds = append(cfgOpt.Outbounds[:i+ins+1], cfgOpt.Outbounds[i+ins:]...)
+						cfgOpt.Outbounds[i+ins] = ob
+						mv++
+					}
 				}
-				for _, url := range opt.Set.Urls {
-					route.RuleSet = append(route.RuleSet, option.RuleSet{
-						Tag:  url.Tag,
-						Type: opt.Set.Type,
-						RemoteOptions: option.RemoteRuleSet{
-							URL:            opt.SpeedDomain + url.Url,
-							UpdateInterval: opt.Set.UpdateInterval,
+			}
+			for _, nodeOption := range pc.Proxy.Nodes {
+				ob := proxy_parse(proxy, nodeOption)
+				if op, ok := outboundProxys[ob.Tag]; ok {
+					cfgOpt.Outbounds[op+mv] = ob
+				} else {
+					cfgOpt.Outbounds = append(cfgOpt.Outbounds, ob)
+				}
+			}
+		}
+	}
+}
+
+func convert_ruleset(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
+	if pc.RuleSet != nil {
+		route := cfgOpt.Route
+		var rsmap = map[string]int{}
+		for i, set := range route.RuleSet {
+			rsmap[set.Tag] = i
+		}
+		for _, url := range pc.RuleSet.Set.Urls {
+			rs := option.RuleSet{
+				Tag:  url.Tag,
+				Type: pc.RuleSet.Set.Type,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            pc.RuleSet.SpeedDomain + url.Url,
+					UpdateInterval: pc.RuleSet.Set.UpdateInterval,
+				},
+			}
+			if op, ok := rsmap[url.Tag]; ok {
+				route.RuleSet[op] = rs
+			} else {
+				route.RuleSet = append(route.RuleSet, rs)
+			}
+		}
+	}
+}
+
+func convert_rules(cfgOpt *option.Options, pc *subconvert.ProxyConfig) error {
+	if pc.Proxy != nil && len(pc.Proxy.Rules) > 0 {
+		route := cfgOpt.Route
+		var rules []option.Rule
+		for _, rule := range route.Rules {
+			if rule.DefaultOptions.RuleAction.RouteOptions.Outbound == "hijack-dns" {
+				rules = append(rules, rule)
+			} else if rule.DefaultOptions.RawDefaultRule.ClashMode != "" {
+				rules = append(rules, rule)
+			}
+		}
+		if len(rules) == 0 {
+			route.Rules = def_rules()
+		}
+		var rsmap = map[string]bool{}
+		for _, set := range route.RuleSet {
+			rsmap[set.Tag] = true
+		}
+		var rmap = map[string]int{}
+		for i, rule := range route.Rules {
+			rmap[rule.DefaultOptions.RouteOptions.Outbound] = i
+		}
+		var nodemap = map[string][]string{}
+		for _, nd := range pc.Proxy.Rules {
+			rarr := strings.Split(nd, ",")
+			rarr[1] = convert_rules_custom(cfgOpt, rarr[1])
+			nodemap[rarr[0]] = append(nodemap[rarr[0]], rarr[1])
+		}
+		for _, rn := range pc.Proxy.Rules {
+			rarr := strings.Split(rn, ",")
+			if rarr[1] == "FINAL" {
+				route.AutoDetectInterface = true
+				route.Final = rarr[0]
+			} else {
+				if bp, ok := rmap[rarr[0]]; ok {
+					route.Rules[bp].DefaultOptions.RawDefaultRule.RuleSet = nodemap[rarr[0]]
+				} else if rsmap[rarr[1]] {
+					route.Rules = append(route.Rules, option.Rule{
+						Type: constant.RuleTypeDefault,
+						DefaultOptions: option.DefaultRule{
+							RawDefaultRule: option.RawDefaultRule{
+								RuleSet: nodemap[rarr[0]],
+							},
+							RuleAction: option.RuleAction{
+								Action: constant.RuleActionTypeRoute,
+								RouteOptions: option.RouteActionOptions{
+									Outbound: rarr[0],
+								},
+							},
 						},
 					})
 				}
@@ -121,79 +275,33 @@ func convert_ruleset(cfgOpt *option.Options) error {
 	return nil
 }
 
-func convert_rules(cfgOpt *option.Options) error {
-	if rulesUrl != "" {
-		if resp, err := http.Get(rulesUrl); err != nil {
-			return err
-		} else {
-			if bs, err := io.ReadAll(resp.Body); err != nil {
-				return err
-			} else {
-				if iniFile, err := ini.LoadSources(ini.LoadOptions{
-					AllowShadows:            true,
-					SkipUnrecognizableLines: false,
-				}, bs); err != nil {
-					return err
-				} else {
-					route := cfgOpt.Route
-					var rules []option.Rule
-					for _, rule := range route.Rules {
-						if rule.DefaultOptions.RuleAction.RouteOptions.Outbound == "hijack-dns" {
-							rules = append(rules, rule)
-						} else if rule.DefaultOptions.RawDefaultRule.ClashMode != "" {
-							rules = append(rules, rule)
-						}
-					}
-					if len(rules) == 0 {
-						route.Rules = def_rules()
-					}
-					section, err := iniFile.GetSection("rules")
-					if err != nil {
-						return err
-					}
-					var rsmap = map[string]bool{}
-					for _, set := range route.RuleSet {
-						rsmap[set.Tag] = true
-					}
-					var rmap = map[string]bool{}
-					for _, rule := range route.Rules {
-						rmap[rule.DefaultOptions.RouteOptions.Outbound] = true
-					}
-					var nodemap = map[string][]string{}
-					ruleNodes := section.Key("rules").ValueWithShadows()
-					for _, nd := range ruleNodes {
-						rarr := strings.Split(nd, ",")
-						nodemap[rarr[0]] = append(nodemap[rarr[0]], rarr[1])
-					}
-					for _, rn := range section.Key("rules").ValueWithShadows() {
-						rarr := strings.Split(rn, ",")
-						if rarr[1] == "FINAL" {
-							route.AutoDetectInterface = true
-							route.Final = rarr[0]
-						} else {
-							if rsmap[rarr[1]] && !rmap[rarr[0]] {
-								route.Rules = append(route.Rules, option.Rule{
-									Type: constant.RuleTypeDefault,
-									DefaultOptions: option.DefaultRule{
-										RawDefaultRule: option.RawDefaultRule{
-											RuleSet: nodemap[rarr[0]],
-										},
-										RuleAction: option.RuleAction{
-											Action: constant.RuleActionTypeRoute,
-											RouteOptions: option.RouteActionOptions{
-												Outbound: rarr[0],
-											},
-										},
-									},
-								})
-							}
-						}
-					}
-				}
+func convert_rules_custom(cfgOpt *option.Options, tag string) string {
+	if tag[0] == '/' {
+		_tag := filepath.Base(tag[1:])
+		_tag = _tag[:strings.LastIndex(_tag, ".")]
+		//
+		route := cfgOpt.Route
+		var rsmap = map[string]int{}
+		if len(route.RuleSet) > 0 {
+			for i, set := range route.RuleSet {
+				rsmap[set.Tag] = i
 			}
 		}
+		rs := option.RuleSet{
+			Tag:  _tag,
+			Type: constant.RuleSetTypeLocal,
+			LocalOptions: option.LocalRuleSet{
+				Path: tag[1:],
+			},
+		}
+		if op, ok := rsmap[_tag]; ok {
+			route.RuleSet[op] = rs
+		} else {
+			route.RuleSet = append(route.RuleSet, rs)
+		}
+		return _tag
 	}
-	return nil
+	return tag
 }
 
 func def_rules() (rules []option.Rule) {
@@ -239,5 +347,41 @@ func def_rules() (rules []option.Rule) {
 			},
 		},
 	})
+	return
+}
+
+func proxy_parse(proxy []subconvert.Proxy, group subconvert.ProxyGroupOption) (ob option.Outbound) {
+	ob.Tag = group.Name
+	ob.Type = group.Type
+	switch group.Type {
+	case constant.TypeSelector:
+		out := option.SelectorOutboundOptions{}
+		for _, px := range group.Proxies {
+			if px[:2] == "[]" {
+				out.Outbounds = append(out.Outbounds, px[2:])
+			} else if len(proxy) > 0 {
+				for _, s := range proxy {
+					if subconvert.Pcre2RegFind(s.Remark, px) {
+						out.Outbounds = append(out.Outbounds, s.Remark)
+					}
+				}
+			}
+			if len(out.Outbounds) == 0 {
+				out.Outbounds = append(out.Outbounds, strings.ToUpper(constant.TypeDirect))
+			}
+		}
+		ob.Options = out
+	case constant.TypeURLTest:
+		out := option.URLTestOutboundOptions{}
+		for _, s := range proxy {
+			if subconvert.Pcre2RegFind(s.Remark, group.Proxies[0]) {
+				out.Outbounds = append(out.Outbounds, s.Remark)
+			}
+		}
+		out.Interval = badoption.Duration(time.Duration(group.Interval) * time.Millisecond)
+		out.Tolerance = uint16(group.Tolerance)
+		out.URL = group.Url
+		ob.Options = out
+	}
 	return
 }

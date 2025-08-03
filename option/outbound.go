@@ -20,13 +20,18 @@ type OutboundOptionsRegistry interface {
 type _Outbound struct {
 	Type    string `json:"type"`
 	Tag     string `json:"tag,omitempty"`
+	Title   string `json:"title,omitempty"`
 	Options any    `json:"-"`
 }
 
 type Outbound _Outbound
 
 func (h *Outbound) MarshalJSONContext(ctx context.Context) ([]byte, error) {
-	return badjson.MarshallObjectsContext(ctx, (*_Outbound)(h), h.Options)
+	if h.Options != nil {
+		return badjson.MarshallObjectsContext(ctx, (*_Outbound)(h), h.Options)
+	} else {
+		return badjson.MarshallObjectsContext(ctx, (*_Outbound)(h))
+	}
 }
 
 func (h *Outbound) UnmarshalJSONContext(ctx context.Context, content []byte) error {

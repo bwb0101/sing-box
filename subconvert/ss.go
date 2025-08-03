@@ -10,6 +10,9 @@ package subconvert
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
 )
 
 func explodeSSConf(content string, nodes *[]Proxy) {
@@ -147,8 +150,11 @@ func explodeSS(ss string, node *Proxy) {
 		if regGetMatch(ss, "(\\S+?)@(\\S+):(\\d+)", &secret, &server, &port) == -1 {
 			return
 		}
-	} else {
 		if regGetMatch(urlSafeBase64Decode(secret), "(\\S+?):(\\S+)", &method, &password) == -1 {
+			return
+		}
+	} else {
+		if regGetMatch(urlSafeBase64Decode(secret), "(\\S+?):(\\S+)@(\\S+):(\\d+)", &method, &password) == -1 {
 			return
 		}
 	}
@@ -160,6 +166,29 @@ func explodeSS(ss string, node *Proxy) {
 	if ps == "" {
 		ps = server + ":" + port
 	}
-
 	ssConstruct(node, group, ps, server, port, password, method, plugin, pluginopts, nil, nil, nil, nil, "")
+}
+
+func ToSS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
+	oo := option.ShadowsocksOutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server:     proxy.Hostname,
+			ServerPort: proxy.Port,
+		},
+		Method:   proxy.EncryptMethod,
+		Password: proxy.Password,
+	}
+	if proxy.Plugin != "" && proxy.PluginOption != "" {
+		if proxy.Plugin == "simple-obfs" {
+			proxy.Plugin = "obfs-local"
+		}
+		oo.Plugin = proxy.Plugin
+		oo.PluginOptions = proxy.PluginOption
+	}
+	oo.RoutingMark = option.FwMark(pc.RoutingMark)
+	ob.Type = constant.TypeShadowsocks
+	ob.Tag = proxy.Remark
+	ob.Title = pc.Title
+	ob.Options = oo
+	return
 }

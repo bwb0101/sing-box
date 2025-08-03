@@ -9,6 +9,9 @@ package subconvert
 
 import (
 	"strings"
+
+	"github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
 )
 
 func explodeTrojan(trojan string, node *Proxy) {
@@ -64,4 +67,35 @@ func explodeTrojan(trojan string, node *Proxy) {
 	}
 
 	trojanConstruct(node, group, remark, server, port, psk, network, host, path, true, nil, &tfo, &scv, nil, "")
+}
+
+func ToTrojan(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
+	oo := option.TrojanOutboundOptions{
+		DialerOptions: option.DialerOptions{},
+		ServerOptions: option.ServerOptions{
+			Server:     proxy.Hostname,
+			ServerPort: proxy.Port,
+		},
+		Password: proxy.Password,
+	}
+	if tr := v2rayTransport(proxy); tr.Type != "" {
+		oo.Transport = &tr
+	}
+	if proxy.TLSSecure {
+		oo.TLS = &option.OutboundTLSOptions{
+			Enabled:  true,
+			Insecure: *proxy.AllowInsecure,
+		}
+		if proxy.ServerName != "" {
+			oo.TLS.ServerName = proxy.ServerName
+		} else if proxy.Host != "" {
+			oo.TLS.ServerName = proxy.Host
+		}
+	}
+	oo.RoutingMark = option.FwMark(pc.RoutingMark)
+	ob.Type = constant.TypeTrojan
+	ob.Tag = proxy.Remark
+	ob.Title = pc.Title
+	ob.Options = oo
+	return
 }

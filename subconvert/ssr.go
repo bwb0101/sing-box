@@ -10,6 +10,8 @@ package subconvert
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/sagernet/sing-box/option"
 )
 
 func explodeSSRConf(content string, nodes *[]Proxy) {
@@ -137,4 +139,19 @@ func explodeSSR(ssr string, node *Proxy) {
 	} else {
 		ssrConstruct(node, group, remarks, server, port, protocol, method, obfs, password, obfsparam, protoparam, nil, nil, nil, "")
 	}
+}
+
+func ToSSR(proxy Proxy, title string, routingMark int) (ob option.Outbound) {
+	// oo := option.ShadowsocksROutboundOptions{
+	// 	ServerOptions: option.ServerOptions{
+	// 		Server:     proxy.Hostname,
+	// 		ServerPort: proxy.Port,
+	// 	},
+	// 	Method:   proxy.EncryptMethod,
+	// 	Password: proxy.Password,
+	// }
+	// oo.RoutingMark = option.FwMark(routingMark)
+	// ob.Type = constant.TypeShadowsocks
+	// ob.Tag = title + "_" + proxy.Remark
+	return
 }

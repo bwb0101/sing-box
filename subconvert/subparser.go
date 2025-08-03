@@ -284,7 +284,6 @@ func anytlsConstruct(node *Proxy, group, remarks, server, port, password, sni, a
 
 func ExplodeConfContent(content string, nodes *[]Proxy) bool {
 	filetype := Unknow
-
 	if strings.Contains(content, "\"version\"") {
 		filetype = SS
 	} else if strings.Contains(content, "\"serverSubscribes\"") {

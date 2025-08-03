@@ -11,6 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
 )
 
 func explodeVmessConf(content string, nodes *[]Proxy) {
@@ -421,4 +424,37 @@ func explodeQuan(quan string, node *Proxy) {
 
 		vmessConstruct(node, group, ps, add, port, typeName, id, aid, net, cipher, path, host, edge, tls, "", nil, nil, nil, nil, "")
 	}
+}
+
+func ToVMESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
+	oo := option.VMessOutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server:     proxy.Hostname,
+			ServerPort: proxy.Port,
+		},
+		UUID:                        proxy.UUID,
+		Security:                    proxy.EncryptMethod,
+		AlterId:                     int(proxy.AlterId),
+		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{},
+	}
+	if tr := v2rayTransport(proxy); tr.Type != "" {
+		oo.Transport = &tr
+	}
+	if proxy.TLSSecure {
+		oo.TLS = &option.OutboundTLSOptions{
+			Enabled:  true,
+			Insecure: *proxy.AllowInsecure,
+		}
+		if proxy.ServerName != "" {
+			oo.TLS.ServerName = proxy.ServerName
+		} else if proxy.Host != "" {
+			oo.TLS.ServerName = proxy.Host
+		}
+	}
+	oo.RoutingMark = option.FwMark(pc.RoutingMark)
+	ob.Type = constant.TypeVMess
+	ob.Tag = proxy.Remark
+	ob.Title = pc.Title
+	ob.Options = oo
+	return
 }

@@ -13,7 +13,29 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dlclark/regexp2"
 )
+
+var OutboundTypes = map[string]bool{
+	"socks":        true,
+	"http":         true,
+	"shadowsocks":  true,
+	"vmess":        true,
+	"trojan":       true,
+	"wireguard":    true,
+	"hysteria":     true,
+	"tor":          true,
+	"ssh":          true,
+	"shadowtls":    true,
+	"anytls":       true,
+	"shadowsocksr": true,
+	"vless":        true,
+	"tuic":         true,
+	"hysteria2":    true,
+	"selector":     true,
+	"urltest":      true,
+}
 
 func getMember(j map[string]any, key string, value *string) {
 	if s, ok := j[key]; ok {
@@ -39,7 +61,7 @@ func regGetMatch(src, match string, targets ...*string) int {
 	// 填充目标变量
 	for i, target := range targets {
 		if target != nil && i < len(result) {
-			*target = result[i]
+			*target = result[i+1]
 		}
 		// 如果已经处理完所有结果就退出
 		if i >= len(result)-1 {
@@ -115,6 +137,23 @@ func regMatch(src, match string) bool {
 	return re.MatchString(src)
 }
 
+func regFind(src, match string) bool {
+	re, err := regexp.Compile(match)
+	if err != nil {
+		return false
+	}
+	return re.MatchString(src)
+}
+
+func Pcre2RegFind(src, match string) bool {
+	re, err := regexp2.Compile(match, 0)
+	if err != nil {
+		return false
+	}
+	b, _ := re.MatchString(src)
+	return b
+}
+
 func isIPv4(address string) bool {
 	matched, _ := regexp.MatchString(`^(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}$`, address)
 	return matched
@@ -158,14 +197,6 @@ func urlSafeBase64Decode(encodedString string) string {
 		return ""
 	}
 	return string(decoded)
-}
-
-func regFind(src, match string) bool {
-	re, err := regexp.Compile(match)
-	if err != nil {
-		return false
-	}
-	return re.MatchString(src)
 }
 
 func toInt(str string, defValue uint32) uint32 {
@@ -221,7 +252,11 @@ func getUrlArg(urlStr, request string) string {
 	}
 
 	// 解析查询参数
-	params, err := url.ParseQuery(u.RawQuery)
+	p := u.RawPath
+	if p == "" {
+		p = u.RawQuery
+	}
+	params, err := url.ParseQuery(p)
 	if err != nil {
 		return ""
 	}
