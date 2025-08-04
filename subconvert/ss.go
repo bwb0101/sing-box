@@ -170,7 +170,7 @@ func explodeSS(ss string, node *Proxy) {
 }
 
 func ToSS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
-	oo := option.ShadowsocksOutboundOptions{
+	oo := &option.ShadowsocksOutboundOptions{
 		ServerOptions: option.ServerOptions{
 			Server:     proxy.Hostname,
 			ServerPort: proxy.Port,

@@ -68,7 +68,7 @@ func UrlParse(urls *ProxyUrl) (pc *ProxyConfig, err error) {
 	pc = &ProxyConfig{}
 	url := urls.SubUrl
 	if url != "" {
-		if pos := strings.Index(url, "?"); pos != -1 {
+		if pos := strings.LastIndex(url, "?"); pos != -1 {
 			url = url[:pos]
 		}
 		if resp, err := http.Get(url); err == nil {

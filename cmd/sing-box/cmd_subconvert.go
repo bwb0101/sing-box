@@ -114,7 +114,7 @@ func subs(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 			cfgOpt.Outbounds = append(cfgOpt.Outbounds, option.Outbound{
 				Type: constant.TypeDirect,
 				Tag:  strings.ToUpper(constant.TypeDirect),
-				Options: option.ListenOptions{
+				Options: option.DialerOptions{
 					RoutingMark: option.FwMark(pc.RoutingMark),
 				},
 			})
@@ -126,16 +126,28 @@ func subs(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 		ins := 2 // 上面两个
 		for _, p := range proxy {
 			var ob option.Outbound
+			var dialer *option.DialerOptions
 			switch p.Type {
 			case subconvert.Shadowsocks:
 				ob = subconvert.ToSS(p, pc)
+				dialer = &ob.Options.(*option.ShadowsocksOutboundOptions).DialerOptions
 			case subconvert.VMess:
 				ob = subconvert.ToVMESS(p, pc)
+				dialer = &ob.Options.(*option.VMessOutboundOptions).DialerOptions
 			case subconvert.VLESS:
 				ob = subconvert.ToVLESS(p, pc)
+				dialer = &ob.Options.(*option.VLESSOutboundOptions).DialerOptions
 			case subconvert.Trojan:
 				ob = subconvert.ToTrojan(p, pc)
+				dialer = &ob.Options.(*option.TrojanOutboundOptions).DialerOptions
+			default:
+				continue
 			}
+			do := dialer.TakeDialerOptions()
+			do.DomainResolver = &option.DomainResolveOptions{
+				Server: "dns_proxy",
+			}
+			dialer.ReplaceDialerOptions(do)
 			if idx, ok := outboundProxys[ob.Tag]; ok {
 				cfgOpt.Outbounds[idx] = ob
 				list := outboundTitles[ob.Title]

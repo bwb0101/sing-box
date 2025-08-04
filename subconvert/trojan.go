@@ -70,7 +70,7 @@ func explodeTrojan(trojan string, node *Proxy) {
 }
 
 func ToTrojan(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
-	oo := option.TrojanOutboundOptions{
+	oo := &option.TrojanOutboundOptions{
 		DialerOptions: option.DialerOptions{},
 		ServerOptions: option.ServerOptions{
 			Server:     proxy.Hostname,

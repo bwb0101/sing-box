@@ -427,7 +427,7 @@ func explodeQuan(quan string, node *Proxy) {
 }
 
 func ToVMESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
-	oo := option.VMessOutboundOptions{
+	oo := &option.VMessOutboundOptions{
 		ServerOptions: option.ServerOptions{
 			Server:     proxy.Hostname,
 			ServerPort: proxy.Port,

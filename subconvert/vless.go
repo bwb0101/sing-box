@@ -113,7 +113,7 @@ func explodeStdVLESS(vless string, node *Proxy) {
 
 func ToVLESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
 	pe := "xudp"
-	oo := option.VLESSOutboundOptions{
+	oo := &option.VLESSOutboundOptions{
 		ServerOptions: option.ServerOptions{
 			Server:     proxy.Hostname,
 			ServerPort: proxy.Port,
