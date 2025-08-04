@@ -1,0 +1,3 @@
+url需要先encode
+subconvert -c ./sing-box.json --sub suburl?title=coffee&routing_mark=100&filter=官网,剩余,套餐,到期&rule=https://g.blfrp.cn/https://raw.githubusercontent.com/bwb0101/meta-rules-dat/sing_config/configs/proxy_cf.ini
+subconvert -c ./singbox.json --rset https://fastly.jsdelivr.net/gh/bwb0101/meta-rules-dat@sing/configs/ruleset.json

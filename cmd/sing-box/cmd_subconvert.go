@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -24,9 +25,21 @@ var (
 )
 
 var commandSubconvert = &cobra.Command{
-	Use: "subconvert",
+	Use:  "subconvert",
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := _subconvert()
+		decodedSubUrl, err := url.QueryUnescape(subUrl)
+		if err != nil {
+			log.Fatal("Failed to decode subUrl: ", err)
+		}
+		subUrl = decodedSubUrl
+		//
+		decodedSubUrl, err = url.QueryUnescape(rulesetUrl)
+		if err != nil {
+			log.Fatal("Failed to decode rulesetUrl: ", err)
+		}
+		rulesetUrl = decodedSubUrl
+		err = _subconvert()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -34,8 +47,8 @@ var commandSubconvert = &cobra.Command{
 }
 
 func init() {
-	mainCommand.PersistentFlags().StringVarP(&subUrl, "sub", "", "", "订阅地址")
-	mainCommand.PersistentFlags().StringVarP(&rulesetUrl, "rset", "", "", "规则集地址")
+	commandSubconvert.Flags().StringVarP(&subUrl, "sub", "", "", "订阅地址")
+	commandSubconvert.Flags().StringVarP(&rulesetUrl, "rset", "", "", "规则集地址")
 	mainCommand.AddCommand(commandSubconvert)
 }
 
@@ -145,7 +158,7 @@ func subs(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 			}
 			do := dialer.TakeDialerOptions()
 			do.DomainResolver = &option.DomainResolveOptions{
-				Server: "dns_proxy",
+				Server: "dns_default",
 			}
 			dialer.ReplaceDialerOptions(do)
 			if idx, ok := outboundProxys[ob.Tag]; ok {
@@ -390,7 +403,7 @@ func proxy_parse(proxy []subconvert.Proxy, group subconvert.ProxyGroupOption) (o
 				out.Outbounds = append(out.Outbounds, s.Remark)
 			}
 		}
-		out.Interval = badoption.Duration(time.Duration(group.Interval) * time.Millisecond)
+		out.Interval = badoption.Duration(time.Duration(group.Interval) * time.Second)
 		out.Tolerance = uint16(group.Tolerance)
 		out.URL = group.Url
 		ob.Options = out
