@@ -103,9 +103,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
 	}
 	/*conn, err := h.dialer.DialContext(ctx, network, destination)
 	if err != nil {
@@ -160,9 +160,9 @@ func (h *Outbound) DialParallel(ctx context.Context, network string, destination
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
 	}
 	var domainStrategy C.DomainStrategy
 	if h.domainStrategy != C.DomainStrategyAsIS {
@@ -200,9 +200,9 @@ func (h *Outbound) DialParallelNetwork(ctx context.Context, network string, dest
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
 	}
 	var domainStrategy C.DomainStrategy
 	if h.domainStrategy != C.DomainStrategyAsIS {

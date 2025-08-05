@@ -63,6 +63,6 @@ func (h *Redirect) NewConnectionEx(ctx context.Context, conn net.Conn, metadata 
 	metadata.Inbound = h.Tag()
 	metadata.InboundType = h.Type()
 	metadata.Destination = M.SocksaddrFromNetIP(destination)
-	h.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+	h.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 	h.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }

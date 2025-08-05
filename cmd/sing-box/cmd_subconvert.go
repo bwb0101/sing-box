@@ -139,28 +139,28 @@ func subs(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 		ins := 2 // 上面两个
 		for _, p := range proxy {
 			var ob option.Outbound
-			var dialer *option.DialerOptions
+			// var dialer *option.DialerOptions
 			switch p.Type {
 			case subconvert.Shadowsocks:
 				ob = subconvert.ToSS(p, pc)
-				dialer = &ob.Options.(*option.ShadowsocksOutboundOptions).DialerOptions
+				// dialer = &ob.Options.(*option.ShadowsocksOutboundOptions).DialerOptions
 			case subconvert.VMess:
 				ob = subconvert.ToVMESS(p, pc)
-				dialer = &ob.Options.(*option.VMessOutboundOptions).DialerOptions
+				// dialer = &ob.Options.(*option.VMessOutboundOptions).DialerOptions
 			case subconvert.VLESS:
 				ob = subconvert.ToVLESS(p, pc)
-				dialer = &ob.Options.(*option.VLESSOutboundOptions).DialerOptions
+				// dialer = &ob.Options.(*option.VLESSOutboundOptions).DialerOptions
 			case subconvert.Trojan:
 				ob = subconvert.ToTrojan(p, pc)
-				dialer = &ob.Options.(*option.TrojanOutboundOptions).DialerOptions
+				// dialer = &ob.Options.(*option.TrojanOutboundOptions).DialerOptions
 			default:
 				continue
 			}
-			do := dialer.TakeDialerOptions()
-			do.DomainResolver = &option.DomainResolveOptions{
-				Server: "dns_default",
-			}
-			dialer.ReplaceDialerOptions(do)
+			// do := dialer.TakeDialerOptions()
+			// do.DomainResolver = &option.DomainResolveOptions{
+			// 	Server: "dns_default",
+			// }
+			// dialer.ReplaceDialerOptions(do)
 			if idx, ok := outboundProxys[ob.Tag]; ok {
 				cfgOpt.Outbounds[idx] = ob
 				list := outboundTitles[ob.Title]
@@ -224,16 +224,16 @@ func convert_ruleset(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 		for i, set := range route.RuleSet {
 			rsmap[set.Tag] = i
 		}
-		for _, url := range pc.RuleSet.Set.Urls {
+		for _, _url := range pc.RuleSet.Set.Urls {
 			rs := option.RuleSet{
-				Tag:  url.Tag,
+				Tag:  _url.Tag,
 				Type: pc.RuleSet.Set.Type,
 				RemoteOptions: option.RemoteRuleSet{
-					URL:            pc.RuleSet.SpeedDomain + url.Url,
+					URL:            pc.RuleSet.SpeedDomain + _url.Url,
 					UpdateInterval: pc.RuleSet.Set.UpdateInterval,
 				},
 			}
-			if op, ok := rsmap[url.Tag]; ok {
+			if op, ok := rsmap[_url.Tag]; ok {
 				route.RuleSet[op] = rs
 			} else {
 				route.RuleSet = append(route.RuleSet, rs)
@@ -245,29 +245,21 @@ func convert_ruleset(cfgOpt *option.Options, pc *subconvert.ProxyConfig) {
 func convert_rules(cfgOpt *option.Options, pc *subconvert.ProxyConfig) error {
 	if pc.Proxy != nil && len(pc.Proxy.Rules) > 0 {
 		route := cfgOpt.Route
-		var rules []option.Rule
-		for _, rule := range route.Rules {
-			if rule.DefaultOptions.RuleAction.RouteOptions.Outbound == "hijack-dns" {
-				rules = append(rules, rule)
-			} else if rule.DefaultOptions.RawDefaultRule.ClashMode != "" {
-				rules = append(rules, rule)
-			}
+		route.DefaultDomainResolver = &option.DomainResolveOptions{
+			Server: "dns_default",
 		}
-		if len(rules) == 0 {
-			route.Rules = def_rules()
-		}
+		route.Rules = def_rules()
 		var rsmap = map[string]bool{}
 		for _, set := range route.RuleSet {
 			rsmap[set.Tag] = true
 		}
-		var rmap = map[string]int{}
-		for i, rule := range route.Rules {
-			rmap[rule.DefaultOptions.RouteOptions.Outbound] = i
-		}
 		var nodemap = map[string][]string{}
 		for _, nd := range pc.Proxy.Rules {
 			rarr := strings.Split(nd, ",")
-			rarr[1] = convert_rules_custom(cfgOpt, rarr[1])
+			if lr, local := convert_rules_custom(cfgOpt, rarr[1]); local {
+				rsmap[rarr[1]] = true
+				rarr[1] = lr
+			}
 			nodemap[rarr[0]] = append(nodemap[rarr[0]], rarr[1])
 		}
 		for _, rn := range pc.Proxy.Rules {
@@ -276,9 +268,7 @@ func convert_rules(cfgOpt *option.Options, pc *subconvert.ProxyConfig) error {
 				route.AutoDetectInterface = true
 				route.Final = rarr[0]
 			} else {
-				if bp, ok := rmap[rarr[0]]; ok {
-					route.Rules[bp].DefaultOptions.RawDefaultRule.RuleSet = nodemap[rarr[0]]
-				} else if rsmap[rarr[1]] {
+				if rsmap[rarr[1]] {
 					route.Rules = append(route.Rules, option.Rule{
 						Type: constant.RuleTypeDefault,
 						DefaultOptions: option.DefaultRule{
@@ -300,7 +290,7 @@ func convert_rules(cfgOpt *option.Options, pc *subconvert.ProxyConfig) error {
 	return nil
 }
 
-func convert_rules_custom(cfgOpt *option.Options, tag string) string {
+func convert_rules_custom(cfgOpt *option.Options, tag string) (string, bool) {
 	if tag[0] == '/' {
 		_tag := filepath.Base(tag[1:])
 		_tag = _tag[:strings.LastIndex(_tag, ".")]
@@ -324,9 +314,9 @@ func convert_rules_custom(cfgOpt *option.Options, tag string) string {
 		} else {
 			route.RuleSet = append(route.RuleSet, rs)
 		}
-		return _tag
+		return _tag, true
 	}
-	return tag
+	return tag, false
 }
 
 func def_rules() (rules []option.Rule) {
@@ -334,13 +324,10 @@ func def_rules() (rules []option.Rule) {
 		Type: constant.RuleTypeDefault,
 		DefaultOptions: option.DefaultRule{
 			RawDefaultRule: option.RawDefaultRule{
-				Protocol: []string{"dns"},
+				Inbound: []string{"dns-in"},
 			},
 			RuleAction: option.RuleAction{
-				Action: constant.RuleActionTypeRoute,
-				RouteOptions: option.RouteActionOptions{
-					Outbound: "hijack-dns",
-				},
+				Action: "hijack-dns",
 			},
 		},
 	})

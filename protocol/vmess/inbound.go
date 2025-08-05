@@ -184,7 +184,7 @@ func (h *Inbound) newConnectionEx(ctx context.Context, conn net.Conn, metadata a
 	} else {
 		metadata.User = user
 	}
-	h.logger.InfoContext(ctx, "[", user, "] inbound connection to ", metadata.Destination)
+	h.logger.DebugContext(ctx, "[", user, "] inbound connection to ", metadata.Destination)
 	h.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -205,9 +205,9 @@ func (h *Inbound) newPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 	if metadata.Destination.Fqdn == packetaddr.SeqPacketMagicAddress {
 		metadata.Destination = M.Socksaddr{}
 		conn = packetaddr.NewConn(bufio.NewNetPacketConn(conn), metadata.Destination)
-		h.logger.InfoContext(ctx, "[", user, "] inbound packet addr connection")
+		h.logger.DebugContext(ctx, "[", user, "] inbound packet addr connection")
 	} else {
-		h.logger.InfoContext(ctx, "[", user, "] inbound packet connection to ", metadata.Destination)
+		h.logger.DebugContext(ctx, "[", user, "] inbound packet connection to ", metadata.Destination)
 	}
 	h.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
@@ -224,6 +224,6 @@ func (h *inboundTransportHandler) NewConnectionEx(ctx context.Context, conn net.
 	metadata.InboundDetour = h.listener.ListenOptions().Detour
 	//nolint:staticcheck
 	metadata.InboundOptions = h.listener.ListenOptions().InboundOptions
-	h.logger.InfoContext(ctx, "inbound connection from ", metadata.Source)
+	h.logger.DebugContext(ctx, "inbound connection from ", metadata.Source)
 	(*Inbound)(h).NewConnectionEx(ctx, conn, metadata, onClose)
 }

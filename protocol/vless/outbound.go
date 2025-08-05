@@ -152,10 +152,12 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", destination)
+		if metadata.Destination.Fqdn == "" && metadata.Domain != "" { // 忽略urltest
+			h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+		}
 		return h.client.DialEarlyConn(conn, destination)
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
 		if h.xudp {
 			return h.client.DialEarlyXUDPPacketConn(conn, destination)
 		} else if h.packetAddr {

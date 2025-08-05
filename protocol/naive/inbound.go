@@ -186,11 +186,11 @@ func (n *Inbound) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func (n *Inbound) newConnection(ctx context.Context, waitForClose bool, conn net.Conn, userName string, source M.Socksaddr, destination M.Socksaddr) {
 	if userName != "" {
-		n.logger.InfoContext(ctx, "[", userName, "] inbound connection from ", source)
-		n.logger.InfoContext(ctx, "[", userName, "] inbound connection to ", destination)
+		n.logger.DebugContext(ctx, "[", userName, "] inbound connection from ", source)
+		n.logger.DebugContext(ctx, "[", userName, "] inbound connection to ", destination)
 	} else {
-		n.logger.InfoContext(ctx, "inbound connection from ", source)
-		n.logger.InfoContext(ctx, "inbound connection to ", destination)
+		n.logger.DebugContext(ctx, "inbound connection from ", source)
+		n.logger.DebugContext(ctx, "inbound connection to ", destination)
 	}
 	var metadata adapter.InboundContext
 	metadata.Inbound = n.Tag()

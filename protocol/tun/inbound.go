@@ -471,8 +471,8 @@ func (t *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, source M.S
 	metadata.Destination = destination
 	//nolint:staticcheck
 	metadata.InboundOptions = t.inboundOptions
-	t.logger.InfoContext(ctx, "inbound connection from ", metadata.Source)
-	t.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+	t.logger.DebugContext(ctx, "inbound connection from ", metadata.Source)
+	t.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 	t.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -485,8 +485,8 @@ func (t *Inbound) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 	metadata.Destination = destination
 	//nolint:staticcheck
 	metadata.InboundOptions = t.inboundOptions
-	t.logger.InfoContext(ctx, "inbound packet connection from ", metadata.Source)
-	t.logger.InfoContext(ctx, "inbound packet connection to ", metadata.Destination)
+	t.logger.DebugContext(ctx, "inbound packet connection from ", metadata.Source)
+	t.logger.DebugContext(ctx, "inbound packet connection to ", metadata.Destination)
 	t.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -501,7 +501,7 @@ func (t *autoRedirectHandler) NewConnectionEx(ctx context.Context, conn net.Conn
 	metadata.Destination = destination
 	//nolint:staticcheck
 	metadata.InboundOptions = t.inboundOptions
-	t.logger.InfoContext(ctx, "inbound redirect connection from ", metadata.Source)
-	t.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+	t.logger.DebugContext(ctx, "inbound redirect connection from ", metadata.Source)
+	t.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 	t.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }

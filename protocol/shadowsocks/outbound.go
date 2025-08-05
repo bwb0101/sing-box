@@ -84,13 +84,15 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	if h.multiplexDialer == nil {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP:
-			h.logger.InfoContext(ctx, "outbound connection to ", destination)
+			if metadata.Destination.Fqdn == "" && metadata.Domain != "" { // 忽略urltest
+				h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+			}
 		case N.NetworkUDP:
 			if h.uotClient != nil {
-				h.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", destination)
+				h.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", metadata.Domain+"("+destination.String()+")")
 				return h.uotClient.DialContext(ctx, network, destination)
 			} else {
-				h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+				h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
 			}
 		}
 		return (*shadowsocksDialer)(h).DialContext(ctx, network, destination)

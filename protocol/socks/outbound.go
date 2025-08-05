@@ -73,13 +73,13 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	metadata.Destination = destination
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
 	case N.NetworkUDP:
 		if h.uotClient != nil {
-			h.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", destination)
+			h.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", metadata.Domain+"("+destination.String()+")")
 			return h.uotClient.DialContext(ctx, network, destination)
 		}
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
 	default:
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}

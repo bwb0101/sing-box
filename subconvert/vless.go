@@ -120,14 +120,6 @@ func ToVLESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
 		},
 		UUID:           proxy.UUID,
 		PacketEncoding: &pe,
-		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
-			TLS: &option.OutboundTLSOptions{
-				Enabled:    true,
-				ServerName: proxy.ServerName,
-				UTLS:       &option.OutboundUTLSOptions{},
-				Reality:    &option.OutboundRealityOptions{},
-			},
-		},
 	}
 	oo.RoutingMark = option.FwMark(pc.RoutingMark)
 	if proxy.XTLS == 2 {
@@ -140,7 +132,7 @@ func ToVLESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
 		oo.OutboundTLSOptionsContainer = option.OutboundTLSOptionsContainer{
 			TLS: &option.OutboundTLSOptions{
 				Enabled:    true,
-				ServerName: proxy.ServerName,
+				ServerName: proxy.SNI,
 				ALPN:       proxy.Alpn,
 				UTLS: &option.OutboundUTLSOptions{
 					Enabled:     true,

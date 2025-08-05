@@ -432,10 +432,9 @@ func ToVMESS(proxy Proxy, pc *ProxyConfig) (ob option.Outbound) {
 			Server:     proxy.Hostname,
 			ServerPort: proxy.Port,
 		},
-		UUID:                        proxy.UUID,
-		Security:                    proxy.EncryptMethod,
-		AlterId:                     int(proxy.AlterId),
-		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{},
+		UUID:     proxy.UUID,
+		Security: proxy.EncryptMethod,
+		AlterId:  int(proxy.AlterId),
 	}
 	if tr := v2rayTransport(proxy); tr.Type != "" {
 		oo.Transport = &tr

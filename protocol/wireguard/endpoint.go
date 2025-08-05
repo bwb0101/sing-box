@@ -149,8 +149,8 @@ func (w *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.
 		}
 	}
 	metadata.Destination = destination
-	w.logger.InfoContext(ctx, "inbound connection from ", source)
-	w.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+	w.logger.DebugContext(ctx, "inbound connection from ", source)
+	w.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 	w.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -171,8 +171,8 @@ func (w *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 			conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), metadata.OriginDestination, metadata.Destination)
 		}
 	}
-	w.logger.InfoContext(ctx, "inbound packet connection from ", source)
-	w.logger.InfoContext(ctx, "inbound packet connection to ", destination)
+	w.logger.DebugContext(ctx, "inbound packet connection from ", source)
+	w.logger.DebugContext(ctx, "inbound packet connection to ", destination)
 	w.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
 

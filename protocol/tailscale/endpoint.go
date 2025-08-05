@@ -446,8 +446,8 @@ func (t *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.
 		destination.Addr = netip.IPv6Loopback()
 	}
 	metadata.Destination = destination
-	t.logger.InfoContext(ctx, "inbound connection from ", source)
-	t.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+	t.logger.DebugContext(ctx, "inbound connection from ", source)
+	t.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 	t.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -468,8 +468,8 @@ func (t *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 		destination.Addr = netip.IPv6Loopback()
 		conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), metadata.OriginDestination, metadata.Destination)
 	}
-	t.logger.InfoContext(ctx, "inbound packet connection from ", source)
-	t.logger.InfoContext(ctx, "inbound packet connection to ", destination)
+	t.logger.DebugContext(ctx, "inbound packet connection from ", source)
+	t.logger.DebugContext(ctx, "inbound packet connection to ", destination)
 	t.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
 

@@ -96,12 +96,12 @@ func (h *Inbound) newUserConnection(ctx context.Context, conn net.Conn, metadata
 	metadata.InboundType = h.Type()
 	user, loaded := auth.UserFromContext[string](ctx)
 	if !loaded {
-		h.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+		h.logger.DebugContext(ctx, "inbound connection to ", metadata.Destination)
 		h.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 		return
 	}
 	metadata.User = user
-	h.logger.InfoContext(ctx, "[", user, "] inbound connection to ", metadata.Destination)
+	h.logger.DebugContext(ctx, "[", user, "] inbound connection to ", metadata.Destination)
 	h.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
 
@@ -111,18 +111,18 @@ func (h *Inbound) streamUserPacketConnection(ctx context.Context, conn N.PacketC
 	user, loaded := auth.UserFromContext[string](ctx)
 	if !loaded {
 		if !metadata.Destination.IsValid() {
-			h.logger.InfoContext(ctx, "inbound packet connection")
+			h.logger.DebugContext(ctx, "inbound packet connection")
 		} else {
-			h.logger.InfoContext(ctx, "inbound packet connection to ", metadata.Destination)
+			h.logger.DebugContext(ctx, "inbound packet connection to ", metadata.Destination)
 		}
 		h.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 		return
 	}
 	metadata.User = user
 	if !metadata.Destination.IsValid() {
-		h.logger.InfoContext(ctx, "[", user, "] inbound packet connection")
+		h.logger.DebugContext(ctx, "[", user, "] inbound packet connection")
 	} else {
-		h.logger.InfoContext(ctx, "[", user, "] inbound packet connection to ", metadata.Destination)
+		h.logger.DebugContext(ctx, "[", user, "] inbound packet connection to ", metadata.Destination)
 	}
 	h.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }

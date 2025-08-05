@@ -30,7 +30,7 @@ func logExchangedResponse(logger logger.ContextLogger, ctx context.Context, resp
 	logger.DebugContext(ctx, "exchanged ", domain, " ", dns.RcodeToString[response.Rcode], " ", ttl)
 	for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 		for _, record := range recordList {
-			logger.InfoContext(ctx, "exchanged ", dns.Type(record.Header().Rrtype).String(), " ", FormatQuestion(record.String()))
+			logger.DebugContext(ctx, "exchanged ", dns.Type(record.Header().Rrtype).String(), " ", FormatQuestion(record.String()))
 		}
 	}
 }

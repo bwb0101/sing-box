@@ -136,8 +136,8 @@ func (h *Inbound) newConnection(ctx context.Context, conn net.Conn, metadata ada
 
 func (h *Inbound) newPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
 	ctx = log.ContextWithNewID(ctx)
-	h.logger.InfoContext(ctx, "inbound packet connection from ", metadata.Source)
-	h.logger.InfoContext(ctx, "inbound packet connection to ", metadata.Destination)
+	h.logger.DebugContext(ctx, "inbound packet connection from ", metadata.Source)
+	h.logger.DebugContext(ctx, "inbound packet connection to ", metadata.Destination)
 	metadata.Inbound = h.Tag()
 	metadata.InboundType = h.Type()
 	return h.router.RoutePacketConnection(ctx, conn, metadata)
