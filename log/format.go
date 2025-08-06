@@ -44,7 +44,7 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message 
 	}
 	if hasId {
 		activeDuration := FormatDuration(time.Since(id.CreatedAt))
-		if !f.DisableColors {
+		if !f.DisableColors && false {
 			var color aurora.Color
 			color = aurora.Color(uint8(id.ID))
 			color %= 215
@@ -66,7 +66,7 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message 
 			color |= 1 << 14
 			message = F.ToString("[", aurora.Colorize(id.ID, color).String(), " ", activeDuration, "] ", message)
 		} else {
-			message = F.ToString("[", id.ID, " ", activeDuration, "] ", message)
+			message = F.ToString("[", activeDuration, "] ", message)
 		}
 	}
 	switch {
@@ -114,7 +114,7 @@ func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string
 	}
 	if hasId {
 		activeDuration := FormatDuration(time.Since(id.CreatedAt))
-		if !f.DisableColors {
+		if !f.DisableColors && false {
 			var color aurora.Color
 			color = aurora.Color(uint8(id.ID))
 			color %= 215
@@ -136,9 +136,9 @@ func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string
 			color |= 1 << 14
 			message = F.ToString("[", aurora.Colorize(id.ID, color).String(), " ", activeDuration, "] ", message)
 		} else {
-			message = F.ToString("[", id.ID, " ", activeDuration, "] ", message)
+			message = F.ToString("[", activeDuration, "] ", message)
 		}
-		messageSimple = F.ToString("[", id.ID, " ", activeDuration, "] ", messageSimple)
+		messageSimple = F.ToString("[", activeDuration, "] ", messageSimple)
 
 	}
 	switch {

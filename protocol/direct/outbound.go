@@ -13,6 +13,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -103,9 +104,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	}
 	/*conn, err := h.dialer.DialContext(ctx, network, destination)
 	if err != nil {
@@ -131,9 +132,9 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 		destination.Port = h.overrideDestination.Port
 	}
 	if h.overrideOption == 0 {
-		h.logger.InfoContext(ctx, "outbound packet connection")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 	} else {
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	}
 	conn, err := h.dialer.ListenPacket(ctx, destination)
 	if err != nil {
@@ -160,9 +161,9 @@ func (h *Outbound) DialParallel(ctx context.Context, network string, destination
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	}
 	var domainStrategy C.DomainStrategy
 	if h.domainStrategy != C.DomainStrategyAsIS {
@@ -200,9 +201,9 @@ func (h *Outbound) DialParallelNetwork(ctx context.Context, network string, dest
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
-		h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	}
 	var domainStrategy C.DomainStrategy
 	if h.domainStrategy != C.DomainStrategyAsIS {
@@ -241,9 +242,9 @@ func (h *Outbound) ListenSerialNetworkPacket(ctx context.Context, destination M.
 		destination.Port = h.overrideDestination.Port
 	}
 	if h.overrideOption == 0 {
-		h.logger.InfoContext(ctx, "outbound packet connection")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 	} else {
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	}
 	conn, newDestination, err := dialer.ListenSerialNetworkPacket(ctx, h.dialer, destination, destinationAddresses, networkStrategy, networkType, fallbackNetworkType, fallbackDelay)
 	if err != nil {

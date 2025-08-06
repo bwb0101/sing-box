@@ -367,7 +367,7 @@ func proxy_parse(proxy []subconvert.Proxy, group subconvert.ProxyGroupOption) (o
 	ob.Type = group.Type
 	switch group.Type {
 	case constant.TypeSelector:
-		out := option.SelectorOutboundOptions{}
+		out := option.SelectorOutboundOptions{InterruptExistConnections: true}
 		for _, px := range group.Proxies {
 			if px[:2] == "[]" {
 				out.Outbounds = append(out.Outbounds, px[2:])

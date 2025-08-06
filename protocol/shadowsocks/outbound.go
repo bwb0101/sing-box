@@ -11,6 +11,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol"
 	"github.com/sagernet/sing-box/transport/sip003"
 	"github.com/sagernet/sing-shadowsocks2"
 	"github.com/sagernet/sing/common"
@@ -84,24 +85,24 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	if h.multiplexDialer == nil {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP:
-			if metadata.Destination.Fqdn == "" && metadata.Domain != "" { // 忽略urltest
-				h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
-			}
+			protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", true)
 		case N.NetworkUDP:
 			if h.uotClient != nil {
-				h.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", metadata.Domain+"("+destination.String()+")")
+				protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound UoT connect packet connection to", false)
 				return h.uotClient.DialContext(ctx, network, destination)
 			} else {
-				h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
+				protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 			}
 		}
 		return (*shadowsocksDialer)(h).DialContext(ctx, network, destination)
 	} else {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP:
-			h.logger.InfoContext(ctx, "outbound multiplex connection to ", destination)
+			if metadata.Destination.Fqdn == "" && metadata.Domain != "" { // 忽略urltest
+				protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound multiplex connection to", false)
+			}
 		case N.NetworkUDP:
-			h.logger.InfoContext(ctx, "outbound multiplex packet connection to ", destination)
+			protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound multiplex packet connection to", false)
 		}
 		return h.multiplexDialer.DialContext(ctx, network, destination)
 	}
@@ -113,15 +114,14 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	metadata.Destination = destination
 	if h.multiplexDialer == nil {
 		if h.uotClient != nil {
-			h.logger.InfoContext(ctx, "outbound UoT packet connection to ", destination)
+			protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound UoT packet connection to", false)
 			return h.uotClient.ListenPacket(ctx, destination)
 		} else {
-			h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+			protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 		}
-		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 		return (*shadowsocksDialer)(h).ListenPacket(ctx, destination)
 	} else {
-		h.logger.InfoContext(ctx, "outbound multiplex packet connection to ", destination)
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound multiplex packet connection to", false)
 		return h.multiplexDialer.ListenPacket(ctx, destination)
 	}
 }

@@ -158,8 +158,24 @@ func (s *Selector) NewConnectionEx(ctx context.Context, conn net.Conn, metadata 
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	selected := s.selected.Load()
 	if outboundHandler, isHandler := selected.(adapter.ConnectionHandlerEx); isHandler {
+		ctx = adapter.WithContextSelector(ctx, &adapter.SelectorGroupContext{
+			Tag: s.Tag() + "<" + selected.Tag() + " " + RealTag(selected) + ">",
+		})
 		outboundHandler.NewConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if selector := adapter.ContextFromSelector(ctx); selector == nil {
+			st := selected.Tag()
+			rt := RealTag(selected)
+			if st != rt && rt != "" {
+				ctx = adapter.WithContextSelector(ctx, &adapter.SelectorGroupContext{
+					Tag: s.Tag() + "<" + st + " " + rt + ">",
+				})
+			} else {
+				ctx = adapter.WithContextSelector(ctx, &adapter.SelectorGroupContext{
+					Tag: s.Tag() + "<" + st + ">",
+				})
+			}
+		}
 		s.connection.NewConnection(ctx, selected, conn, metadata, onClose)
 	}
 }
@@ -168,8 +184,16 @@ func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	selected := s.selected.Load()
 	if outboundHandler, isHandler := selected.(adapter.PacketConnectionHandlerEx); isHandler {
+		ctx = adapter.WithContextSelector(ctx, &adapter.SelectorGroupContext{
+			Tag: s.Tag() + "<" + selected.Tag() + " " + RealTag(selected) + ">",
+		})
 		outboundHandler.NewPacketConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if selector := adapter.ContextFromSelector(ctx); selector == nil {
+			ctx = adapter.WithContextSelector(ctx, &adapter.SelectorGroupContext{
+				Tag: s.Tag() + "<" + selected.Tag() + ">",
+			})
+		}
 		s.connection.NewPacketConnection(ctx, selected, conn, metadata, onClose)
 	}
 }

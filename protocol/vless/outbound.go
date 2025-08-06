@@ -12,6 +12,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol"
 	"github.com/sagernet/sing-box/transport/v2ray"
 	"github.com/sagernet/sing-vmess/packetaddr"
 	"github.com/sagernet/sing-vmess/vless"
@@ -152,12 +153,10 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
-		if metadata.Destination.Fqdn == "" && metadata.Domain != "" { // 忽略urltest
-			h.logger.InfoContext(ctx, "outbound connection to ", metadata.Domain+"("+destination.String()+")")
-		}
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound connection to", false)
 		return h.client.DialEarlyConn(conn, destination)
 	case N.NetworkUDP:
-		h.logger.InfoContext(ctx, "outbound packet connection to ", metadata.Domain+"("+destination.String()+")")
+		protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 		if h.xudp {
 			return h.client.DialEarlyXUDPPacketConn(conn, destination)
 		} else if h.packetAddr {
@@ -178,10 +177,10 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 }
 
 func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
+	protocol.CustomOutboundLogOut(h.logger, ctx, metadata, h.Type(), "outbound packet connection to", false)
 	var conn net.Conn
 	var err error
 	if h.transport != nil {
@@ -193,7 +192,7 @@ func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr)
 		}
 	}
 	if err != nil {
-		common.Close(conn)
+		_ = common.Close(conn)
 		return nil, err
 	}
 	if h.xudp {
